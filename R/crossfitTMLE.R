@@ -59,7 +59,7 @@ crossfitTMLE <- function(data,
   for(cf in 1:num_cf){
     seed1 = cf_seed[cf]
     fit_result = try({
-        tmle_single(data,
+               tmle_single(data,
                        exposure,
                        outcome,
                        covarsT,
@@ -74,58 +74,44 @@ crossfitTMLE <- function(data,
                        seed=seed1)}, silent = TRUE)
 
     if (inherits(fit_result, "try-error")) {
-      fit_sngle <-  data.frame(or=NA, log_or_se=NA)
+      fit_sngle <-  data.frame(rd=NA, var = NA, P1=NA, P0=NA, OR=NA, logOR=NA)
     } else {
-      fit_sngle <- fit_result
+      # 假设fit_result返回了P1和P0
+      P1 <- fit_result$P1
+      P0 <- fit_result$P0
+      OR <- (P1/(1-P1)) / (P0/(1-P0))
+      logOR <- log(OR)
+      fit_sngle <- data.frame(rd=fit_result$rd, var=fit_result$var, P1=P1, P0=P0, OR=OR, logOR=logOR)
     }
 
     runs[[cf]] <- fit_sngle
   }
+  
+ res = dplyr::bind_rows(runs)
 
-  res = dplyr::bind_rows(runs)
-
-  # 计算对数OR
-  res$log_or <- log(res$or)
-
+  # 我们使用logOR来计算，因为logOR更接近正态分布
   if(stat == "mean"){
-    # 在对数尺度上计算均值
-    mean_log_or <- mean(res$log_or, na.rm = TRUE)
-    # 调整方差：平均的渐近方差 + 交叉拟合间的方差
-    # 总方差 = 平均的log_or_se^2 + (log_or - mean_log_or)^2 的均值
-    mean_asymptotic_variance <- mean(res$log_or_se^2, na.rm = TRUE)
-    between_variance <- mean((res$log_or - mean_log_or)^2, na.rm = TRUE)
-    total_variance <- mean_asymptotic_variance + between_variance
-    results <- c(mean_log_or, total_variance)
+    mean_logOR <- mean(res$logOR, na.rm = TRUE)
+    se_logOR <- sd(res$logOR, na.rm = TRUE) / sqrt(sum(!is.na(res$logOR)))
+    OR_point <- exp(mean_logOR)
   }
   if(stat == "median"){
-    # 在对数尺度上计算中位数
-    median_log_or <- median(res$log_or, na.rm = TRUE)
-    # 对于中位数，我们如何调整方差？这里我们使用中位数绝对偏差（MAD）吗？
-    # 但是原代码中使用了中位数，然后调整方差的方式与均值类似，但使用中位数代替均值。
-    # 注意：原代码中对于中位数的调整是：var0 = var + (rd - medians[1])^2，然后取中位数。
-    # 这里我们类似地做：
-    median_asymptotic_variance <- median(res$log_or_se^2, na.rm = TRUE)
-    # 计算每个log_or与中位数的偏差的平方，然后取中位数
-    median_between_variance <- median((res$log_or - median_log_or)^2, na.rm = TRUE)
-    total_variance <- median_asymptotic_variance + median_between_variance
-    results <- c(median_log_or, total_variance)
+    # 注意：中位数在对数尺度上不好直接平均，所以我们还是用均值
+    mean_logOR <- mean(res$logOR, na.rm = TRUE)
+    se_logOR <- sd(res$logOR, na.rm = TRUE) / sqrt(sum(!is.na(res$logOR)))
+    OR_point <- exp(mean_logOR)
   }
 
-  # 点估计：取指数
-  point_estimate <- exp(results[1])
-  # 标准误：sqrt(total_variance)
-  se <- sqrt(results[2])
-
-  # 置信区间：在对数尺度上计算，然后取指数
+  # 计算置信区间
   t.value = qt((1-conf.level)/2, nrow(data), lower.tail = F)
-  l_ci_log = results[1] - t.value * se
-  u_ci_log = results[1] + t.value * se
+  l_ci_logOR = mean_logOR - t.value * se_logOR
+  u_ci_logOR = mean_logOR + t.value * se_logOR
 
-  # 转换回OR尺度
-  l_ci = exp(l_ci_log)
-  u_ci = exp(u_ci_log)
+  # 指数化
+  l_ci_OR = exp(l_ci_logOR)
+  u_ci_OR = exp(u_ci_logOR)
 
-  res1 = tibble(OR=point_estimate, se = se, lower.ci = l_ci, upper.ci = u_ci)
+  res_OR = tibble(OR = OR_point, se_logOR = se_logOR, lower.ci = l_ci_OR, upper.ci = u_ci_OR, res = res)
 
-  return(res1)
+  return(res_OR)
 }
