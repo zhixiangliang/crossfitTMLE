@@ -328,7 +328,8 @@ r1 = r0 = rd = NULL
 
   rd = mean(rdc)                                                       
   var1 = mean(vd)
-
+  S1 = mean(S1C)
+  
   res <- data.frame(rd=rd, var = var1)
 
   return(res)
