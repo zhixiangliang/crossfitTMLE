@@ -268,7 +268,7 @@ tmle_single = function(data,
   if1 = if0 = ifd = list()
   v1 = v0 = vd = NULL
   rdc <- NULL
-
+  
 
   mu_summ <- list(); n <- NULL
 
@@ -308,8 +308,8 @@ tmle_single = function(data,
 
   for(i in 1:n_split){
     rdc[i] <- mean(mu_sum[mu_sum$ss == i, ]$mu1) - mean(mu_sum[mu_sum$ss == i, ]$mu0)
-    S1[i] <- mean(mu_sum[mu_sum$ss == i, ]$mu1)
-    S0[i] <- mean(mu_sum[mu_sum$ss == i, ]$mu0)
+    S1C[i] <- mean(mu_sum[mu_sum$ss == i, ]$mu1)
+    S0C[i] <- mean(mu_sum[mu_sum$ss == i, ]$mu0)
     D1 = with(mu_sum[mu_sum$ss == i, ], (x/pi)*(y-mu1) + (mu1 - mean(mu1)))
     D0 = with(mu_sum[mu_sum$ss == i, ], ((1-x)/(1-pi))*(y-mu0) + (mu0 - mean(mu0)))
     EIC = D1-D0
@@ -319,8 +319,8 @@ tmle_single = function(data,
 
   rd = mean(rdc)                                                       
   var1 = mean(vd)
-  S1 = mean(S1)
-  S0 = mean(S0)
+  S1 = mean(S1C)
+  S0 = mean(S0C)
 
   res <- data.frame(rd=rd, var = var1 )
 
