@@ -315,7 +315,7 @@ tmle_single = function(data,
     MORC[i] <- (mean(mu_sum[mu_sum$ss == i, ]$mu1) * (1 - mean(mu_sum[mu_sum$ss == i, ]$mu0))) / ((1 - mean(mu_sum[mu_sum$ss == i, ]$mu1)) * mean(mu_sum[mu_sum$ss == i, ]$mu0))
     D1 = with(mu_sum[mu_sum$ss == i, ], (x/pi)*(y-mu1) + (mu1 - mean(mu1)))
     D0 = with(mu_sum[mu_sum$ss == i, ], ((1-x)/(1-pi))*(y-mu0) + (mu0 - mean(mu0)))
-    EIC = D1-D0
+    EIC = (D1/S1C)-(D0/S0C)
     vd[i] <- var(EIC)/nrow(data)
   }
 
@@ -325,8 +325,10 @@ tmle_single = function(data,
   S1 = mean(S1C)
   S0 = mean(S0C)
   MOR = mean(MORC)
+  RR = S1/S0
+  logRR = log(RR)
   
-  res <- data.frame(rd=rd, var = var1, S1 = S1, S0 = S0 , MOR = MOR)
+  res <- data.frame(rd=rd, var = var1, S1 = S1, S0 = S0 , MOR = MOR , RR = RR)
 
   return(res)
 }
